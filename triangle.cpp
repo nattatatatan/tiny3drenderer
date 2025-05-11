@@ -62,6 +62,7 @@ void fill_triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage &fra
             left_x = bx + (y - by) / mBC;
             right_x = ax + (y - ay) / mAC;
         }
+        if (left_x > right_x) std::swap(left_x, right_x);
 
         // Draw horizontal line between left_x and right_x
         for (int x = left_x; x <= right_x; x++) {
