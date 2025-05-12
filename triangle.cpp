@@ -39,38 +39,24 @@ void line(int ax, int ay, int bx, int by, TGAImage &framebuffer, TGAColor color)
     }
 }
 
-
 void triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage &framebuffer, TGAColor color) {
-    // sort the vertices, a,b,c in ascending y order (bubblesort yay!)
-    if (ay>by) { std::swap(ax, bx); std::swap(ay, by); }
-    if (ay>cy) { std::swap(ax, cx); std::swap(ay, cy); }
-    if (by>cy) { std::swap(bx, cx); std::swap(by, cy); }
-
-    // Compute slopes for edges
-    float mAB = (bx - ax) == 0 ? 0 : (float)(by - ay) / (bx - ax);
-    float mAC = (cx - ax) == 0 ? 0 : (float)(cy - ay) / (cx - ax);
-    float mBC = (cx - bx) == 0 ? 0 : (float)(cy - by) / (cx - bx);
-
-    // Scanline approach: Iterate over y-values
-    for (int y = ay; y <= cy; y++) {
-        int left_x, right_x;
-
-        // Compute left-most x using edge equations
-        if (y < by) {
-            left_x = ax + (y - ay) / mAC;
-            right_x = ax + (y - ay) / mAB;
-        } else {
-            left_x = bx + (y - by) / mBC;
-            right_x = ax + (y - ay) / mAC;
-        }
-        if (left_x > right_x) std::swap(left_x, right_x);
-
-        // Draw horizontal line between left_x and right_x
-        for (int x = left_x; x <= right_x; x++) {
+    int bbminx = std::min(std::min(ax, bx), cx); // bounding box for the triangle
+    int bbminy = std::min(std::min(ay, by), cy); // defined by its top left and bottom right corners
+    int bbmaxx = std::max(std::max(ax, bx), cx);
+    int bbmaxy = std::max(std::max(ay, by), cy);
+    
+#pragma omp parallel for
+    for (int x=bbminx; x<=bbmaxx; x++) {
+        for (int y=bbminy; y<=bbmaxy; y++) {
+            double denominator = (((by-ay)*(cx-ax)) - ((bx-ax)*(cy-ay)));
+            double w1 = ((ax*(cy-ay)) + ((y-ay)*(cx-ax)) - (x*(cy-ay)))/denominator;
+            double w2 = (y - ay - (w1*(by-ay)))/(cy-ay);
+            if (w1 < 0 || w2 < 0 || (w1+w2) > 1) continue; // negative barycentric coordinate => the pixel is outside the triangle
             framebuffer.set(x, y, color);
         }
-    }   
+    }
 }
+
 
 int main(int argc, char** argv) {
     TGAImage framebuffer(width, height, TGAImage::RGB);
