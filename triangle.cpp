@@ -4,9 +4,15 @@
 #include "geometry.h"
 #include "model.h"
 #include "tgaimage.h"
+#include <vector>
+#include <array>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <cmath>
 
-constexpr int width  = 128;
-constexpr int height = 128;
+constexpr int width  = 1600;
+constexpr int height = 1600;
 
 constexpr TGAColor white   = {255, 255, 255, 255}; // attention, BGRA order
 constexpr TGAColor green   = {  0, 255,   0, 255};
@@ -57,12 +63,30 @@ void triangle(int ax, int ay, int bx, int by, int cx, int cy, TGAImage &framebuf
     }
 }
 
+std::tuple<int, int> project(vec3 v) {
+    return { static_cast<int>(std::round((v.x + 1.0) * width / 2)),
+             static_cast<int>(std::round((v.y + 1.0) * height / 2)) };
+}
+
 
 int main(int argc, char** argv) {
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " model/{model}.obj" << std::endl;
+        return 1;
+    }
+
+    Model model(argv[1]);
     TGAImage framebuffer(width, height, TGAImage::RGB);
-    triangle(  7, 45, 35, 100, 45,  60, framebuffer, red);
-    triangle(120, 35, 90,   5, 45, 110, framebuffer, white);
-    triangle(115, 83, 80,  90, 85, 120, framebuffer, green);
-    framebuffer.write_tga_file("framebuffer.tga");
+
+    for (int i=0; i<model.nfaces(); i++) { // iterate through all triangles
+        auto [ax, ay] = project(model.vert(i, 0));
+        auto [bx, by] = project(model.vert(i, 1));
+        auto [cx, cy] = project(model.vert(i, 2));
+        TGAColor rnd;
+        for (int c=0; c<3; c++) rnd[c] = std::rand()%255;
+        triangle(ax, ay, bx, by, cx, cy, framebuffer, rnd);
+    }
+
+    framebuffer.write_tga_file("hw2.tga");
     return 0;
 }
